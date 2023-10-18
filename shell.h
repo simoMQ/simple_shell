@@ -1,96 +1,149 @@
-#ifndef _SHELL_H_
-#define _SHELL_H_
-#define _GNU_SOURCE
+#ifndef SHELL_H
+#define SHELL_H
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <sys/stat.h>
-#include <limits.h>
-#include <fcntl.h>
+#include <sys/wait.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
+#include <signal.h>
+#include <dirent.h>
 #include <stdarg.h>
-#include <ctype.h>
-
-/*macros*/
-#define PATH_MAX_LENGTH 4096
-#define PATH_SEPARATOR ":"
-#define PROMPT "$ "
-#define MAX_TOKENS 1024
 #define BUFFER_SIZE 1024
+#define BACKET_SIZE 64
 
-/* prompt.c */
-void prompt(void);
+typedef struct entry_s
+{
+	char *key;
+	char *value;
+} entry_t;
 
-/* get_input.c */
-char *get_input(void);
-void free_last_input(void);
-/* get_line.c*/
-void *get_line(void);
+typedef enum status_actions_e
+{
+	UPDATE_STATUS,
+	GET_STATUS
+} status_actions_t;
 
-/* built-in funcs */
-int check_for_builtin(char **args);
-int execute_buitlin(char *cmd, char **args);
-void shell_help(void);
-void shell_exit(char **args);
-void shell_cd(char **args);
-int shell_setenv(char **args);
-int shell_unsetenv(char **args);
-int shell_env(void);
-int shell_clear(char **args);
+typedef struct list_s
+{
+	void *data;
+	struct list_s *next;
+} list_t;
 
-/* signal_handler.c */
-void handle_sigint(int sig);
-void handle_sigquit(int sig);
-void handle_sigstp(int sig);
+typedef enum command_type_e
+{
+	BUILTINS,
+	EXTERNAL,
+	NOT_FOUND
+} command_type_t;
 
-/* execute.c */
-int execute(char **args);
+typedef struct command_s
+{
+	char *name;
+	char **arguments;
+	command_type_t type;
+} command_t;
 
-/* parser.c */
-char **tokenize(char *str, const char *delim);
-char **tokenize_input(char *input);
+typedef struct builtin_s
+{
+	char name[30];
+	int (*function)(command_t *command);
+} builtin_t;
 
-/* get_env.c */
-char *_getenv(const char *name);
+typedef enum builtin_actions_e
+{
+	GET_BUILTIN,
+	SET_BUILTIN
+} builtin_actions_t;
 
-/* get_path.c */
-char *get_path(void);
+typedef struct map_s
+{
+	list_t *backets[BACKET_SIZE];
+} map_t;
 
-/* find_in_path.c */
-char *find_in_path(char *command);
+typedef enum enviroment_action_e
+{
+	INIT_ENV,
+	SET_ENTRY,
+	GET_VALUE,
+	GET_KEYS,
+	DELETE_ENTRY,
+	CONVERT_INTO_2D,
+	CLEAR_ENV
+} enviroment_action_t;
 
-/* free.c */
-void free_error(char **argv, char *arg);
-void free_tokens(char **ptr);
-void free_path(void);
+typedef enum globals_action_e
+{
+	GET_LINE,
+	GET_LINE_NUMBER,
+	GET_SHELL_NAME,
+	SET_LINE,
+	SET_SHELL_NAME,
+	INCREMENT_LINE_NUMBER,
+	SET_2D,
+	GET_2D
+} globals_action_t;
 
-/* error.c */
-void _puts(char *str);
-void _puterror(char *err);
+typedef int (*builtins_t)(command_t *);
 
-/* utils_funcs1.c */
-int _strlen(const char *);
-int _strcmp(const char *s1, const char *s2);
-int _strncmp(const char *s1, const char *s2, size_t n);
-char *_strstr(char *haystack, char *needle);
-char *_strchr(char *s, char c);
-
-/* utils_funcs2.c */
-char *_strcpy(char *, char *);
-char *_strcat(char *, const char *);
-char *_strdup(const char *);
-int _putchar(char);
-unsigned int _strspn(char *s, char *accept);
-
-/* utils_funcs3.c */
+char *_copy(char *dest, const char *src, size_t size);
+void *_realloc(void *old_buffer, size_t old_size, size_t new_size);
+ssize_t myGetline(char **line);
+char *trimspace(const char *line);
+int _parsing_error_handler(char *line);
+size_t _strlen(const char *s);
+void _free_split(char ***backets);
+char **_split(const char *line, const char *diameter);
+list_t *addTolist(list_t **lst, void *data);
+void *pop_from_list(list_t **list);
+size_t _listlen(const list_t *list);
+void free_list(list_t *list, void (*free_content)(void *data));
+int _strcmp(const char *str1, const char *str2);
+char *_strdup(const char *str);
+int hachcode(const char *key);
+map_t *initMp(void);
+int valueSet(map_t *map, const char *key, const char *value);
+char *_get_value(const map_t *map, const char *key);
+void _clear_entry(void *data);
+void clearMp(map_t *map);
+list_t *keyGetGen(const map_t *map);
+int deleteEntry(map_t *map, const char *key);
+command_t *_inigf(char **tokens);
+void freeCmd(void *data);
+command_t *handlcmd(const char *line);
+int semichr(const char *line);
+list_t *_pipe_handler(const char *line);
+int _handle_pipe_execution(list_t *pipes, int previous_stdin);
+int statusmt(status_actions_t action, int new_status);
+void _handle_sigint(int sig);
+void *envimat(enviroment_action_t action,
+							 const char *key, const char *value);
+int statusmt(status_actions_t action, int new_status);
+char **convert2darry(void);
+void feedEnv(char **new_env);
+char *pathFromCmd(char *command);
+char *stlinstttt(const char *line, int start, int end);
+char *_strcat(const char *str1, const char *str2);
+char *_itoa(int number);
+char *varEnvm(char *env_key);
+char **_trim_2darray(char **arr);
+int _env(command_t *command);
+int _isdigit(const char *s);
+int _str2dlen(char **arr2d);
 int _atoi(const char *str);
-char *_memset(char *, char, unsigned int);
-char *_memcpy(char *dest, char *src, unsigned int n);
-void *_realloc(void *, unsigned int, unsigned int);
-void *_calloc(unsigned int nmemb, unsigned int size);
-
+int __exit(command_t *command);
+builtins_t bMt(builtin_actions_t action, char *name,
+							   int (*function)(command_t *command));
+void _excute(command_t *command);
+int _setenv(command_t *command);
+int _unsetenv(command_t *command);
+int _fprint(int fd, const char *format, ...);
+void *globalStatus(globals_action_t action, char **s);
+int _cd(command_t *command);
+void _handle_sigint(int sig);
+void pmt(void);
+int positionGet(const char *line);
+char *exclct(const char *line);
 #endif

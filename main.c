@@ -1,40 +1,39 @@
 #include "shell.h"
 
-/**
- * main - implements a simple shell
- *
- * Return: EXIT_SUCCESS.
- */
-int main(void)
+int main(int ac, char **av)
 {
-	char *input;
-	char **args;
-	int status;
+	char *line, *ncmdLine;
 
-	/* Register signal handlers */
-	signal(SIGINT, handle_sigint);
-	signal(SIGQUIT, handle_sigquit);
-	signal(SIGTSTP, handle_sigstp);
-
-	do {
-		input = get_input();
-		if (!input || !*input)/* EOF detected, exit the loop */
-			break;
-
-		args = tokenize_input(input);
-		if (!args || !*args)
+	(void)ac;
+	signal(SIGINT, _handle_sigint);
+	envimat(INIT_ENV, NULL, NULL);
+	feedEnv(__environ);
+	bMt(SET_BUILTIN, "exit", __exit);
+	bMt(SET_BUILTIN, "env", _env);
+	bMt(SET_BUILTIN, "setenv", _setenv);
+	bMt(SET_BUILTIN, "unsetenv", _unsetenv);
+	bMt(SET_BUILTIN, "cd", _cd);
+	globalStatus(SET_SHELL_NAME, &av[0]);
+	while (1)
+	{
+		pmt();
+		myGetline(&line);
+		if (!line)
 		{
-			free(input);
-			free_tokens(args);
-			continue;
+			free(line);
+			break;
 		}
-		status = execute(args);
-		free(input);
-		free_tokens(args);
-
-		/* Set status to 1 to continue the loop */
-		status = 1;
-	} while (status);
-
-	return (EXIT_SUCCESS);
+		ncmdLine = trimspace(line);
+		free(line);
+		line = ncmdLine;
+		ncmdLine = exclct(line);
+		free(line);
+		line = ncmdLine;
+		globalStatus(SET_LINE, &line);
+		globalStatus(INCREMENT_LINE_NUMBER, NULL);
+		semichr(line);
+		free(line);
+	}
+	envimat(CLEAR_ENV, NULL, NULL);
+	return (statusmt(GET_STATUS, 0));
 }
